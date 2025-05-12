@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>PvZGw2Dle</title>
+  <style>
+     body {
+      font-family: sans-serif;
+      background-image: url('https://th.bing.com/th/id/OIP.WZ0WyMY6-HUBRyLNiiZwfwHaFj?rs=1&pid=ImgDetMain');
+      background-size: cover;
+      background-repeat: no-repeat;
+      background-position: center;
+      min-height: 100vh;
+      color: white;
+      text-align: center;
+      margin: 0;
+      padding: 0;
+    }
+
+    .stats-header {
+      display: flex;
+      justify-content: space-around;
+      font-weight: bold;
+      background: rgba(0, 0, 0, 0.6);
+      padding: 10px 0;
+      margin-top: 20px;
+    }
+
+    .guess-row {
+      display: flex;
+      justify-content: space-around;
+      margin: 5px 0;
+      background: rgba(0, 0, 0, 0.5);
+      padding: 5px 0;
+    }
+
+    .cell {
+      flex: 1;
+      margin: 0 5px;
+      padding: 5px;
+      background-color: grey;
+      border-radius: 5px;
+    }
+
+    .correct {
+      background-color: green;
+    }
+
+    .input-container {
+      margin: 20px;
+    }
+
+    #zombie-name {
+      padding: 10px;
+      font-size: 16px;
+      width: 60%;
+    }
+
+    .suggestions {
+      background: rgba(255, 255, 255, 0.9);
+      color: black;
+      max-height: 200px;
+      overflow-y: auto;
+      margin: 10px auto;
+      width: 60%;
+    }
+
+    .suggestions div {
+      padding: 5px;
+      cursor: pointer;
+    }
+
+    .suggestions div:hover {
+      background-color: lightgray;
+    }
+
+    .popup {
+      position: fixed;
+      top: 30%;
+      left: 50%;
+      transform: translate(-50%, -30%);
+      background: white;
+      color: black;
+      padding: 20px;
+      border-radius: 10px;
+      display: none;
+      z-index: 999;
+    }
+
+    .popup h2 {
+      margin: 0 0 10px 0;
+    }
+
+    .popup .close {
+      position: absolute;
+      top: 5px;
+      right: 10px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .plant-info {
+      margin-top: 5px;
+      font-size: 14px;
+    }
+
+    .notice {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.9);
+      color: white;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+      font-size: 20px;
+      padding: 20px;
+    }
+
+    .notice-content {
+      background-color: rgba(255, 0, 0, 0.9);
+      padding: 30px;
+      border-radius: 10px;
+      max-width: 600px;
+      text-align: center;
+      position: relative;
+    }
+
+    .notice .close {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      font-size: 30px;
+      cursor: pointer;
+      color: white;
+    }
+
+    .notice .close:hover {
+      color: black;
+    }
+
+    .plant-info {
+      margin-top: 5px;
+      font-size: 14px;
+    }
+    
+    .variant-reveal {
+      font-weight: bold;
+      margin-top: 10px;
+      font-size: 18px;
+    }
+    
+    #loss-message {
+      display: none;
+      font-weight: bold;
+      font-size: 18px;
+      margin-top: 20px;
+      background: rgba(0, 0, 0, 0.7);
+      padding: 10px;
+      border-radius: 5px;
+    }
+  </style>
+</head>
+<body>
+
+<!-- Notice Modal -->
+<div id="notice" class="notice">
+  <div class="notice-content">
+    <div class="close" onclick="closeNotice()">❌</div>
+    <h2>NOTICE</h2>
+    <p>
+      The game was developed by SemiDen / @candyapple.png on Discord and a friend who doesn't wanna have their social name said. If you have any problems, please ping me!<br>
+      The game you are about to play is not affiliated with PopCap or EA, this is a fangame of Wordle and PvZ Heroes.<br>
+      There aren't many plants at the moment but will be soon, there are also many wrong stats as we really just copied and pasted for some plants (stats will be fixed in a week because we want to make it have alot of plants!<br>
+      Also, type the plant name and press the plant to guess! The ui is 'kinda' bugged on mobile, sorry.
+    </p>
+  </div>
+</div>
+
+
+<div class="input-container">
+  <input type="text" id="zombie-name" placeholder="Guess a PvZ GW2 character..." oninput="updateSuggestions()">
+  <div class="suggestions" id="suggestions"></div>
+</div>
+
+<div class="stats-header">
+  <span>Turn</span>
+  <span>Class</span>
+  <span>Variant</span>
+  <span>Legendary</span>
+</div>
+
+<div id="guesses"></div>
+<div id="loss-message"></div>
+
+<div class="popup" id="popup">
+  <span class="close" onclick="closePopup()">❌</span>
+  <h2>You won the PvZGw2Dle!</h2>
+  <pre id="resultText"></pre>
+  <div id="variant-reveal" class="variant-reveal"></div>
+</div>
+
+<script>
+  // Sample data - you'll need to replace this with actual PvZ GW2 characters
+  const characters = [
+  // Peashooter Variants
+  { name: "Peashooter", class: "Peashooter", variant: "Standard", legendary: false },
+  { name: "Peashooter", class: "Peashooter", variant: "Fire Pea", legendary: false },
+  { name: "Peashooter", class: "Peashooter", variant: "Ice Pea", legendary: false },
+  { name: "Peashooter", class: "Peashooter", variant: "Toxic Pea", legendary: false },
+  { name: "Peashooter", class: "Peashooter", variant: "Commando Pea", legendary: false },
+  { name: "Peashooter", class: "Peashooter", variant: "Agent Pea", legendary: false },
+  { name: "Peashooter", class: "Peashooter", variant: "Law Pea", legendary: false },
+  { name: "Peashooter", class: "Peashooter", variant: "Plasma Pea", legendary: false },
+  { name: "Peashooter", class: "Peashooter", variant: "Rock Pea", legendary: false },
+  { name: "Peashooter", class: "Peashooter", variant: "Electro Pea", legendary: false },
+
+  // Sunflower Variants
+  { name: "Sunflower", class: "Sunflower", variant: "Standard", legendary: false },
+  { name: "Sunflower", class: "Sunflower", variant: "Fire Flower", legendary: false },
+  { name: "Sunflower", class: "Sunflower", variant: "Power Flower", legendary: false },
+  { name: "Sunflower", class: "Sunflower", variant: "Shadow Flower", legendary: false },
+  { name: "Sunflower", class: "Sunflower", variant: "Mystic Flower", legendary: false },
+  { name: "Sunflower", class: "Sunflower", variant: "Metal Petal", legendary: false },
+  { name: "Sunflower", class: "Sunflower", variant: "Sun Pharaoh", legendary: false },
+  { name: "Sunflower", class: "Sunflower", variant: "Alien Flower", legendary: false },
+  { name: "Sunflower", class: "Sunflower", variant: "Vampire Flower", legendary: false },
+  { name: "Sunflower", class: "Sunflower", variant: "Stuffy Flower", legendary: false },
+
+  // Chomper Variants
+  { name: "Chomper", class: "Chomper", variant: "Standard", legendary: false },
+  { name: "Chomper", class: "Chomper", variant: "Fire Chomper", legendary: false },
+  { name: "Chomper", class: "Chomper", variant: "Hot Rod Chomper", legendary: false },
+  { name: "Chomper", class: "Chomper", variant: "Power Chomper", legendary: false },
+  { name: "Chomper", class: "Chomper", variant: "Count Chompula", legendary: false },
+  { name: "Chomper", class: "Chomper", variant: "Toxic Chomper", legendary: false },
+  { name: "Chomper", class: "Chomper", variant: "Armor Chomper", legendary: false },
+  { name: "Chomper", class: "Chomper", variant: "Chomp Thing", legendary: false },
+  { name: "Chomper", class: "Chomper", variant: "Yeti Chomper", legendary: false },
+  { name: "Chomper", class: "Chomper", variant: "Disco Chomper", legendary: true },
+  { name: "Chomper", class: "Chomper", variant: "Unicorn Chomper", legendary: true },
+  { name: "Chomper", class: "Chomper", variant: "Twilight Chomper", legendary: true },
+
+  // Cactus Variants
+  { name: "Cactus", class: "Cactus", variant: "Standard", legendary: false },
+  { name: "Cactus", class: "Cactus", variant: "Fire Cactus", legendary: false },
+  { name: "Cactus", class: "Cactus", variant: "Ice Cactus", legendary: false },
+  { name: "Cactus", class: "Cactus", variant: "Power Cactus", legendary: false },
+  { name: "Cactus", class: "Cactus", variant: "Future Cactus", legendary: false },
+  { name: "Cactus", class: "Cactus", variant: "Camouflage Cactus", legendary: false },
+  { name: "Cactus", class: "Cactus", variant: "Bandit Cactus", legendary: false },
+  { name: "Cactus", class: "Cactus", variant: "Jade Cactus", legendary: false },
+  { name: "Cactus", class: "Cactus", variant: "Zen Cactus", legendary: false },
+  { name: "Cactus", class: "Cactus", variant: "Petrified Cactus", legendary: false },
+
+  // Citron Variants
+  { name: "Citron", class: "Citron", variant: "Standard", legendary: false },
+  { name: "Citron", class: "Citron", variant: "Frozen Citron", legendary: false },
+  { name: "Citron", class: "Citron", variant: "Electro Citron", legendary: false },
+  { name: "Citron", class: "Citron", variant: "Iron Citron", legendary: true },
+  { name: "Citron", class: "Citron", variant: "Toxic Citron", legendary: false },
+  { name: "Citron", class: "Citron", variant: "Party Citron", legendary: true },
+
+  // Rose Variants
+  { name: "Rose", class: "Rose", variant: "Standard", legendary: false },
+  { name: "Rose", class: "Rose", variant: "Fire Rose", legendary: false },
+  { name: "Rose", class: "Rose", variant: "Frost Rose", legendary: false },
+  { name: "Rose", class: "Rose", variant: "Nec'Rose", legendary: false },
+  { name: "Rose", class: "Rose", variant: "Party Rose", legendary: true },
+
+  // Kernel Corn Variants
+  { name: "Kernel Corn", class: "Kernel Corn", variant: "Standard", legendary: false },
+  { name: "Kernel Corn", class: "Kernel Corn", variant: "Barbecue Corn", legendary: false },
+  { name: "Kernel Corn", class: "Kernel Corn", variant: "Mob Cob", legendary: false },
+  { name: "Kernel Corn", class: "Kernel Corn", variant: "Popcorn", legendary: false },
+  { name: "Kernel Corn", class: "Kernel Corn", variant: "Party Corn", legendary: true },
+  { name: "Kernel Corn", class: "Kernel Corn", variant: "Commando Corn", legendary: true },
+
+
+  // Imp Variants
+  { name: "Imp", class: "Imp", variant: "Standard", legendary: false },
+  { name: "Imp", class: "Imp", variant: "Lil' Drake", legendary: false },
+  { name: "Imp", class: "Imp", variant: "Pylon Imp", legendary: false },
+  { name: "Imp", class: "Imp", variant: "Party Imp", legendary: true },
+  { name: "Imp", class: "Imp", variant: "Z7 Imp", legendary: true },
+  { name: "Imp", class: "Imp", variant: "Scallywag Imp", legendary: true },
+
+  // Super Brainz Variants
+  { name: "Super Brainz", class: "Super Brainz", variant: "Standard", legendary: false },
+  { name: "Super Brainz", class: "Super Brainz", variant: "Cosmic Brainz", legendary: false },
+  { name: "Super Brainz", class: "Super Brainz", variant: "Electro Brainz", legendary: false },
+  { name: "Super Brainz", class: "Super Brainz", variant: "Toxic Brainz", legendary: true },
+  { name: "Super Brainz", class: "Super Brainz", variant: "Breakfast Brainz", legendary: false },
+  { name: "Super Brainz", class: "Super Brainz", variant: "Party Brainz", legendary: true },
+
+  // Captain Deadbeard Variants
+  { name: "Captain Deadbeard", class: "Captain Deadbeard", variant: "Standard", legendary: false },
+  { name: "Captain Deadbeard", class: "Captain Deadbeard", variant: "Captain Cannon", legendary: false },
+  { name: "Captain Deadbeard", class: "Captain Deadbeard", variant: "Captain Flameface", legendary: false },
+  { name: "Captain Deadbeard", class: "Captain Deadbeard", variant: "Captain Sharkbite", legendary: false },
+  { name: "Captain Deadbeard", class: "Captain Deadbeard", variant: "Captain Party Man", legendary: true },
+  { name: "Captain Deadbeard", class: "Captain Deadbeard", variant: "Captain Squawk", legendary: false },
+
+  // Foot Soldier Variants
+  { name: "Foot Soldier", class: "Foot Soldier", variant: "Standard", legendary: false },
+  { name: "Foot Soldier", class: "Foot Soldier", variant: "Super Commando", legendary: false },
+  { name: "Foot Soldier", class: "Foot Soldier", variant: "Arctic Trooper", legendary: false },
+  { name: "Foot Soldier", class: "Foot Soldier", variant: "Tank Commander", legendary: false },
+  { name: "Foot Soldier", class: "Foot Soldier", variant: "General Supremo", legendary: false },
+  { name: "Foot Soldier", class: "Foot Soldier", variant: "Camo Ranger", legendary: false },
+  { name: "Foot Soldier", class: "Foot Soldier", variant: "Sky Trooper", legendary: false },
+  { name: "Foot Soldier", class: "Foot Soldier", variant: "Paleontologist", legendary: false },
+  { name: "Foot Soldier", class: "Foot Soldier", variant: "Sanitation Expert", legendary: false },
+  { name: "Foot Soldier", class: "Foot Soldier", variant: "Archaeologist", legendary: false },
+  { name: "Foot Soldier", class: "Foot Soldier", variant: "Park Ranger", legendary: false },
+  { name: "Foot Soldier", class: "Foot Soldier", variant: "Centurion", legendary: false },
+  { name: "Foot Soldier", class: "Foot Soldier", variant: "Golf Star", legendary: false },
+  { name: "Foot Soldier", class: "Foot Soldier", variant: "Party Soldier", legendary: true },
+
+  // Engineer Variants
+  { name: "Engineer", class: "Engineer", variant: "Standard", legendary: false },
+  { name: "Engineer", class: "Engineer", variant: "Welder", legendary: false },
+  { name: "Engineer", class: "Engineer", variant: "Electrician", legendary: false },
+  { name: "Engineer", class: "Engineer", variant: "Plumber", legendary: false },
+  { name: "Engineer", class: "Engineer", variant: "Mechanic", legendary: false },
+  { name: "Engineer", class: "Engineer", variant: "Sanitation Expert", legendary: false },
+  { name: "Engineer", class: "Engineer", variant: "Painter", legendary: false },
+  { name: "Engineer", class: "Engineer", variant: "Roadie Z", legendary: false },
+  { name: "Engineer", class: "Engineer", variant: "Landscaper", legendary: false },
+  { name: "Engineer", class: "Engineer", variant: "Party Engineer", legendary: true },
+
+  // Scientist Variants
+  { name: "Scientist", class: "Scientist", variant: "Standard", legendary: false },
+  { name: "Scientist", class: "Scientist", variant: "Marine Biologist", legendary: false },
+  { name: "Scientist", class: "Scientist", variant: "Astronaut", legendary: false },
+  { name: "Scientist", class: "Scientist", variant: "Chemist", legendary: false },
+  { name: "Scientist", class: "Scientist", variant: "Archaeologist", legendary: false },
+  { name: "Scientist", class: "Scientist", variant: "Dr. Toxic", legendary: false },
+  { name: "Scientist", class: "Scientist", variant: "Physicist", legendary: false },
+  { name: "Scientist", class: "Scientist", variant: "Computer Scientist", legendary: true },
+  { name: "Scientist", class: "Scientist", variant: "Zoologist", legendary: false },
+  { name: "Scientist", class: "Scientist", variant: "Paleontologist", legendary: false },
+
+  // All-Star Variants
+  { name: "All-Star", class: "All-Star", variant: "Standard", legendary: false },
+  { name: "All-Star", class: "All-Star", variant: "Cricket Star", legendary: false },
+  { name: "All-Star", class: "All-Star", variant: "Hockey Star", legendary: false },
+  { name: "All-Star", class: "All-Star", variant: "Baseball Star", legendary: false },
+  { name: "All-Star", class: "All-Star", variant: "Wrestling Star", legendary: false },
+  { name: "All-Star", class: "All-Star", variant: "Golf Star", legendary: false },
+  { name: "All-Star", class: "All-Star", variant: "Tennis Star", legendary: false },
+  { name: "All-Star", class: "All-Star", variant: "Motivational Star", legendary: false },
+  { name: "All-Star", class: "All-Star", variant: "Rugby Star", legendary: false },
+  { name: "All-Star", class: "All-Star", variant: "Party All-Star", legendary: true }
+
+];
+
+  let answer = characters[Math.floor(Math.random() * characters.length)];
+  let guesses = [];
+  const maxGuesses = 7;
+  let gameOver = false;
+
+  function updateSuggestions() {
+    const input = document.getElementById('zombie-name').value.toLowerCase();
+    const container = document.getElementById('suggestions');
+    container.innerHTML = '';
+    characters.filter(p => p.name.toLowerCase().includes(input)).forEach(character => {
+      const div = document.createElement('div');
+      div.textContent = character.name;
+      
+      // Display character stats
+      const charInfo = document.createElement('div');
+      charInfo.className = 'plant-info';
+      charInfo.innerHTML = `Class: ${character.class} | Variant: ${character.variant} | Legendary: ${character.legendary ? '✔' : '✖'}`;
+      div.appendChild(charInfo);
+      
+      div.onclick = () => makeGuess(character);
+      container.appendChild(div);
+    });
+  }
+
+  function makeGuess(character) {
+    if (gameOver || guesses.length >= maxGuesses) return;
+    guesses.push(character);
+    renderGuesses();
+    document.getElementById('zombie-name').value = '';
+    document.getElementById('suggestions').innerHTML = '';
+
+    if (character.name === answer.name) {
+      setTimeout(() => showPopup(), 300);
+    } else if (guesses.length >= maxGuesses) {
+      showLossMessage();
+    }
+
+    // Disable input after max guesses or win
+    if (guesses.length >= maxGuesses || character.name === answer.name) {
+      gameOver = true;
+      document.getElementById('zombie-name').disabled = true;
+    }
+  }
+
+  function renderGuesses() {
+    const container = document.getElementById('guesses');
+    container.innerHTML = '';
+    for (let i = 0; i < guesses.length; i++) {
+      const guess = guesses[i];
+      const row = document.createElement('div');
+      row.className = 'guess-row';
+
+      const turn = document.createElement('div');
+      turn.className = 'cell';
+      turn.textContent = (i + 1) + '️⃣';
+      row.appendChild(turn);
+
+      ['class', 'variant', 'legendary'].forEach(stat => {
+        const cell = document.createElement('div');
+        cell.className = 'cell';
+        let isCorrect = guess[stat] === answer[stat];
+        if (isCorrect) cell.classList.add('correct');
+        cell.textContent = stat === 'legendary' ? (guess[stat] ? '✔' : '✖') : guess[stat];
+        row.appendChild(cell);
+      });
+
+      container.appendChild(row);
+    }
+  }
+
+  function showPopup() {
+    const popup = document.getElementById('popup');
+    const result = document.getElementById('resultText');
+    const variantReveal = document.getElementById('variant-reveal');
+    
+    result.textContent = "I won the PvZGw2Dle!\n";
+    for (let i = guesses.length - 1; i >= 0; i--) {
+      const guess = guesses[i];
+      let line = (i + 1) + '️⃣';
+      ['class', 'variant', 'legendary'].forEach(stat => {
+        line += guess[stat] === answer[stat] ? '🟩' : '🟥';
+      });
+      result.textContent += line + '\n';
+    }
+    
+    variantReveal.textContent = `The variant was ${answer.variant}`;
+    result.textContent += "Play PvZGw2Dle at semiden.github.io/pvzgw2dle";
+    popup.style.display = 'block';
+  }
+
+  function showLossMessage() {
+    const lossMessage = document.getElementById('loss-message');
+    lossMessage.textContent = `The variant was ${answer.variant}`;
+    lossMessage.style.display = 'block';
+  }
+
+  function closePopup() {
+    document.getElementById('popup').style.display = 'none';
+  }
+
+  function closeNotice() {
+    document.getElementById('notice').style.display = 'none';
+  }
+</script>
+
+</body>
+</html>
